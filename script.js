@@ -8,27 +8,31 @@ const areaList = document.getElementById('student-list-area');
 const actionBar = document.getElementById('action-bar');
 const countSpan = document.getElementById('count-siswa');
 
-// 1. GET GURU (Pemberi Anti-Cache Param)
+// 1. GET GURU
 elKelas.addEventListener('change', function() {
     elPengampu.innerHTML = '<option>⏳ Loading...</option>';
     elPengampu.disabled = true;
     btnLoad.style.display = 'none';
-    actionBar.style.display = 'none';
-    areaList.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 40px;"><i class="fa-solid fa-arrow-up"></i><br>Silakan pilih Kelas & Pengampu diatas.</div>';
     
     fetch(`${SCRIPT_URL}?action=getGuru&kelas=${this.value}&_nc=${Date.now()}`)
         .then(res => res.json())
         .then(res => {
-            if (res.status === "success") {
-                let html = '<option value="" disabled selected>-- Pilih Pengampu --</option>';
-                res.data.forEach(n => html += `<option value="${n}">${n}</option>`);
-                elPengampu.innerHTML = html;
-                elPengampu.disabled = false;
-            } else {
-                alert("❌ GAGAL: " + res.message);
+            // Perhatikan perbedaannya: mengambil res.data
+            let listGuru = res.data || res; 
+            if (!Array.isArray(listGuru)) {
+                alert("❌ Format data dari server tidak sesuai.");
+                return;
             }
+            
+            let html = '<option value="" disabled selected>-- Pilih Pengampu --</option>';
+            listGuru.forEach(n => html += `<option value="${n}">${n}</option>`);
+            elPengampu.innerHTML = html;
+            elPengampu.disabled = false;
         })
-        .catch(err => alert("❌ GAGAL MEMUAT GURU: Jaringan terganggu."));
+        .catch(err => {
+            alert("❌ GAGAL MEMUAT GURU: Gangguan koneksi.");
+            elPengampu.innerHTML = '<option value="" disabled selected>-- Gagal Memuat --</option>';
+        });
 });
 
 // 2. ENABLE LOAD BUTTON
