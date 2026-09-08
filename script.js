@@ -8,20 +8,27 @@ const areaList = document.getElementById('student-list-area');
 const actionBar = document.getElementById('action-bar');
 const countSpan = document.getElementById('count-siswa');
 
-// 1. GET GURU
+// 1. GET GURU (Pemberi Anti-Cache Param)
 elKelas.addEventListener('change', function() {
     elPengampu.innerHTML = '<option>⏳ Loading...</option>';
     elPengampu.disabled = true;
     btnLoad.style.display = 'none';
+    actionBar.style.display = 'none';
+    areaList.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 40px;"><i class="fa-solid fa-arrow-up"></i><br>Silakan pilih Kelas & Pengampu diatas.</div>';
     
-    fetch(`${SCRIPT_URL}?action=getGuru&kelas=${this.value}`)
+    fetch(`${SCRIPT_URL}?action=getGuru&kelas=${this.value}&_nc=${Date.now()}`)
         .then(res => res.json())
-        .then(data => {
-            let html = '<option value="" disabled selected>-- Pilih Pengampu --</option>';
-            data.forEach(n => html += `<option value="${n}">${n}</option>`);
-            elPengampu.innerHTML = html;
-            elPengampu.disabled = false;
-        });
+        .then(res => {
+            if (res.status === "success") {
+                let html = '<option value="" disabled selected>-- Pilih Pengampu --</option>';
+                res.data.forEach(n => html += `<option value="${n}">${n}</option>`);
+                elPengampu.innerHTML = html;
+                elPengampu.disabled = false;
+            } else {
+                alert("❌ GAGAL: " + res.message);
+            }
+        })
+        .catch(err => alert("❌ GAGAL MEMUAT GURU: Jaringan terganggu."));
 });
 
 // 2. ENABLE LOAD BUTTON
@@ -29,25 +36,44 @@ elPengampu.addEventListener('change', () => {
     btnLoad.style.display = 'block';
 });
 
-// 3. GET SISWA & GENERATE CARDS
+// 3. GET SISWA & DUKUNGAN CEK JATAH JURNAL
 btnLoad.addEventListener('click', function() {
     const k = elKelas.value;
     const g = elPengampu.value;
     
-    areaList.innerHTML = '<div style="text-align:center; padding:30px;"><i class="fa-solid fa-spinner fa-spin fa-2x" style="color:var(--accent)"></i><p>Mengambil Data Siswa...</p></div>';
+    areaList.innerHTML = '<div style="text-align:center; padding:30px;"><i class="fa-solid fa-spinner fa-spin fa-2x" style="color:var(--accent)"></i><p>Memeriksa Jatah & Data Siswa...</p></div>';
     
-    fetch(`${SCRIPT_URL}?action=getSiswa&kelas=${k}&guru=${encodeURIComponent(g)}`)
+    fetch(`${SCRIPT_URL}?action=getSiswa&kelas=${k}&guru=${encodeURIComponent(g)}&_nc=${Date.now()}`)
         .then(res => res.json())
-        .then(siswaList => {
-            if(!siswaList || siswaList.length === 0) {
-                areaList.innerHTML = '<div style="text-align:center; color:red">Tidak ada siswa ditemukan.</div>';
+        .then(res => {
+            // Cek Jatah Habis
+            if (res.status === "quota_empty") {
+                areaList.innerHTML = `<div style="text-align:center; color:red; padding:20px; font-weight:bold;"><i class="fa-solid fa-circle-xmark fa-2x"></i><br><br>${res.message}</div>`;
+                actionBar.style.display = 'none';
+                alert("⛔ " + res.message);
                 return;
             }
-            renderBulkForm(siswaList);
+
+            if (res.status === "error") {
+                areaList.innerHTML = `<div style="text-align:center; color:red; padding:20px;">${res.message}</div>`;
+                actionBar.style.display = 'none';
+                return;
+            }
+
+            if (!res.data || res.data.length === 0) {
+                areaList.innerHTML = '<div style="text-align:center; color:red; padding:20px;">Tidak ada siswa ditemukan.</div>';
+                actionBar.style.display = 'none';
+                return;
+            }
+
+            renderBulkForm(res.data);
+        })
+        .catch(err => {
+            areaList.innerHTML = '<div style="text-align:center; color:red; padding:20px;">Gagal mengambil data siswa. Coba lagi.</div>';
         });
 });
 
-// --- FUNGSI RENDER (MEMBUAT TAMPILAN PER SISWA) ---
+// --- FUNGSI RENDER CARDS ---
 function renderBulkForm(list) {
     let html = '';
     list.forEach((nama, i) => {
@@ -109,11 +135,10 @@ function renderBulkForm(list) {
     countSpan.innerText = list.length;
     actionBar.style.display = 'flex';
     
-    // Auto scroll sedikit ke bawah
     window.scrollBy({ top: 200, behavior: 'smooth' });
 }
 
-// --- LOGIKA TOGGLE KEHADIRAN & SETORAN ---
+// --- LOGIKA CARD TOGGLE ---
 window.toggleHadir = (i) => {
     const val = document.getElementById(`hadir-${i}`).value;
     const card = document.getElementById(`card-${i}`);
@@ -122,9 +147,9 @@ window.toggleHadir = (i) => {
     
     if(val !== 'Hadir') {
         card.classList.add('absent');
-        rowSetor.style.display = 'none'; // Sembunyikan opsi setor
-        selectSetor.value = 'Tidak Setor'; // Reset
-        toggleSetor(i); // Hide details
+        rowSetor.style.display = 'none';
+        selectSetor.value = 'Tidak Setor';
+        toggleSetor(i);
     } else {
         card.classList.remove('absent');
         rowSetor.style.display = 'block';
@@ -142,14 +167,13 @@ window.toggleSetor = (i) => {
     } else {
         details.classList.remove('show-details');
         card.classList.remove('active-setor');
-        // Reset fields
         document.getElementById(`tilawah-${i}`).value = '';
         document.getElementById(`tahfidz-${i}`).value = '';
         document.getElementById(`target-${i}`).value = '';
     }
 };
 
-// --- SUBMIT SEMUA DATA ---
+// --- SUBMIT DENGAN STATUS TEGAS & HARD REFRESH ---
 window.submitData = () => {
     const cards = document.querySelectorAll('.student-card');
     const k = elKelas.value;
@@ -173,10 +197,9 @@ window.submitData = () => {
                 dTahfidz = document.getElementById(`tahfidz-${i}`).value;
                 dTarget = document.getElementById(`target-${i}`).value;
 
-                // VALIDASI: Jika setor, tahfidz wajib diisi
                 if (!dTahfidz.trim()) {
                     document.getElementById(`tahfidz-${i}`).style.borderColor = 'red';
-                    errorMsg = `Mohon isi Batas Tahfidz untuk siswa: ${nama}`;
+                    errorMsg = `GAGAL: Mohon isi Batas Tahfidz untuk siswa: ${nama}`;
                 }
             }
         }
@@ -200,9 +223,8 @@ window.submitData = () => {
 
     if(!confirm(`Yakin kirim data untuk ${payload.length} siswa?`)) return;
 
-    // ANIMASI LOADING
     const oldText = btn.innerHTML;
-    btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> MENGIRIM...';
+    btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> MENGIRIM DATA...';
     btn.disabled = true;
 
     fetch(SCRIPT_URL, {
@@ -212,14 +234,17 @@ window.submitData = () => {
     .then(res => res.json())
     .then(res => {
         if(res.status === 'success') {
-            alert("✅ SUKSES! Data tersimpan.");
-            window.location.reload();
+            alert("✅ TERKIRIM: " + res.message);
+            // Paksa reload dengan Timestamp agar data browser tidak basi (Bypass Cache)
+            window.location.href = window.location.pathname + '?refresh=' + Date.now();
         } else {
-            throw new Error(res.message);
+            alert("❌ GAGAL: " + res.message);
+            btn.innerHTML = oldText;
+            btn.disabled = false;
         }
     })
     .catch(err => {
-        alert("Gagal: " + err);
+        alert("❌ GAGAL: Terjadi kesalahan jaringan / server. Detail: " + err);
         btn.innerHTML = oldText;
         btn.disabled = false;
     });
