@@ -10,28 +10,42 @@ const countSpan = document.getElementById('count-siswa');
 
 // 1. GET GURU
 elKelas.addEventListener('change', function() {
-    elPengampu.innerHTML = '<option>⏳ Loading...</option>';
+    elPengampu.innerHTML = '<option>⏳ Memuat daftar pengampu...</option>';
     elPengampu.disabled = true;
     btnLoad.style.display = 'none';
+    actionBar.style.display = 'none';
+    
+    areaList.innerHTML = `
+        <div style="text-align: center; color: #64748b; padding: 40px 20px; background: #f8fafc; border-radius: 16px; border: 2px dashed #e2e8f0; margin-top: 20px;">
+            <i class="fa-solid fa-hand-pointer fa-2x" style="color: #94a3b8; margin-bottom: 10px;"></i>
+            <p style="margin: 0; font-weight: 500;">Silakan pilih Pengampu untuk melanjutkan.</p>
+        </div>`;
     
     fetch(`${SCRIPT_URL}?action=getGuru&kelas=${this.value}&_nc=${Date.now()}`)
         .then(res => res.json())
         .then(res => {
-            // Perhatikan perbedaannya: mengambil res.data
-            let listGuru = res.data || res; 
-            if (!Array.isArray(listGuru)) {
-                alert("❌ Format data dari server tidak sesuai.");
-                return;
+            const listGuru = res.data || res;
+            if (res.status === "success" || Array.isArray(listGuru)) {
+                let html = '<option value="" disabled selected>-- Pilih Pengampu --</option>';
+                listGuru.forEach(n => html += `<option value="${n}">${n}</option>`);
+                elPengampu.innerHTML = html;
+                elPengampu.disabled = false;
+            } else {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Gagal Memuat',
+                    text: res.message || 'Gagal mengambil data pengampu',
+                    confirmButtonColor: '#2563eb'
+                });
             }
-            
-            let html = '<option value="" disabled selected>-- Pilih Pengampu --</option>';
-            listGuru.forEach(n => html += `<option value="${n}">${n}</option>`);
-            elPengampu.innerHTML = html;
-            elPengampu.disabled = false;
         })
         .catch(err => {
-            alert("❌ GAGAL MEMUAT GURU: Gangguan koneksi.");
-            elPengampu.innerHTML = '<option value="" disabled selected>-- Gagal Memuat --</option>';
+            Swal.fire({
+                icon: 'error',
+                title: 'Koneksi Terganggu',
+                text: 'Gagal menghubungkan ke server Google Sheets.',
+                confirmButtonColor: '#ef4444'
+            });
         });
 });
 
@@ -40,32 +54,50 @@ elPengampu.addEventListener('change', () => {
     btnLoad.style.display = 'block';
 });
 
-// 3. GET SISWA & DUKUNGAN CEK JATAH JURNAL
+// 3. GET SISWA & CEK JATAH JURNAL
 btnLoad.addEventListener('click', function() {
     const k = elKelas.value;
     const g = elPengampu.value;
     
-    areaList.innerHTML = '<div style="text-align:center; padding:30px;"><i class="fa-solid fa-spinner fa-spin fa-2x" style="color:var(--accent)"></i><p>Memeriksa Jatah & Data Siswa...</p></div>';
+    areaList.innerHTML = `
+        <div style="text-align:center; padding:50px 20px;">
+            <i class="fa-solid fa-circle-notch fa-spin fa-3x" style="color:#2563eb; margin-bottom:15px;"></i>
+            <p style="color:#475569; font-weight:600; font-size:15px; margin:0;">Memeriksa Jatah & Mengambil Data Siswa...</p>
+            <small style="color:#94a3b8;">Mohon tunggu sebentar</small>
+        </div>`;
     
     fetch(`${SCRIPT_URL}?action=getSiswa&kelas=${k}&guru=${encodeURIComponent(g)}&_nc=${Date.now()}`)
         .then(res => res.json())
         .then(res => {
-            // Cek Jatah Habis
+            // Skenario Jatah Habis
             if (res.status === "quota_empty") {
-                areaList.innerHTML = `<div style="text-align:center; color:red; padding:20px; font-weight:bold;"><i class="fa-solid fa-circle-xmark fa-2x"></i><br><br>${res.message}</div>`;
+                renderQuotaEmptyUI(res.message);
                 actionBar.style.display = 'none';
-                alert("⛔ " + res.message);
+
+                // Modern Popup
+                Swal.fire({
+                    icon: 'info',
+                    title: 'Jatah Jurnal Habis',
+                    text: res.message,
+                    confirmButtonText: 'Saya Mengerti',
+                    confirmButtonColor: '#ef4444',
+                    backdrop: `rgba(15, 23, 42, 0.6)`
+                });
                 return;
             }
 
             if (res.status === "error") {
-                areaList.innerHTML = `<div style="text-align:center; color:red; padding:20px;">${res.message}</div>`;
+                areaList.innerHTML = `<div style="text-align:center; color:#ef4444; padding:30px; font-weight:600;">⚠️ ${res.message}</div>`;
                 actionBar.style.display = 'none';
                 return;
             }
 
             if (!res.data || res.data.length === 0) {
-                areaList.innerHTML = '<div style="text-align:center; color:red; padding:20px;">Tidak ada siswa ditemukan.</div>';
+                areaList.innerHTML = `
+                    <div style="text-align:center; padding:40px; background:#fef2f2; border-radius:16px; border:1px solid #fecaca; color:#dc2626; margin-top:20px;">
+                        <i class="fa-solid fa-users-slash fa-2x" style="margin-bottom:10px;"></i>
+                        <p style="font-weight:600; margin:0;">Tidak ada siswa ditemukan di kelas ini.</p>
+                    </div>`;
                 actionBar.style.display = 'none';
                 return;
             }
@@ -73,11 +105,65 @@ btnLoad.addEventListener('click', function() {
             renderBulkForm(res.data);
         })
         .catch(err => {
-            areaList.innerHTML = '<div style="text-align:center; color:red; padding:20px;">Gagal mengambil data siswa. Coba lagi.</div>';
+            Swal.fire({
+                icon: 'error',
+                title: 'Gagal Memuat Data',
+                text: 'Terjadi kesalahan jaringan. Sila coba beberapa saat lagi.',
+                confirmButtonColor: '#ef4444'
+            });
         });
 });
 
-// --- FUNGSI RENDER CARDS ---
+// --- UI ESTETIK SAAT JATAH HABIS ---
+function renderQuotaEmptyUI(msg) {
+    areaList.innerHTML = `
+        <div style="
+            margin-top: 25px;
+            background: linear-gradient(135deg, #ffffff 0%, #fef2f2 100%);
+            border: 1px solid #fecaca;
+            border-radius: 20px;
+            padding: 35px 25px;
+            text-align: center;
+            box-shadow: 0 10px 25px -5px rgba(239, 68, 68, 0.1);
+        ">
+            <div style="
+                width: 70px;
+                height: 70px;
+                background: #fee2e2;
+                color: #ef4444;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                margin: 0 auto 20px auto;
+                font-size: 30px;
+                box-shadow: 0 0 0 8px #fef2f2;
+            ">
+                <i class="fa-solid fa-lock"></i>
+            </div>
+            <h3 style="color: #991b1b; font-size: 20px; margin: 0 0 10px 0; font-weight: 700;">
+                Akses Pengisian Diberhentikan
+            </h3>
+            <p style="color: #b91c1c; font-size: 15px; margin: 0 0 20px 0; line-height: 1.5;">
+                ${msg}
+            </p>
+            <span style="
+                display: inline-block;
+                background: #ef4444;
+                color: white;
+                padding: 6px 16px;
+                border-radius: 50px;
+                font-size: 12px;
+                font-weight: 600;
+                letter-spacing: 0.5px;
+            ">
+                <i class="fa-solid fa-circle-check"></i> STATUS: JURNAL PAS
+            </span>
+        </div>
+    `;
+}
+
+// --- FUNGSI RENDER FORM SISWA ---
 function renderBulkForm(list) {
     let html = '';
     list.forEach((nama, i) => {
@@ -177,7 +263,7 @@ window.toggleSetor = (i) => {
     }
 };
 
-// --- SUBMIT DENGAN STATUS TEGAS & HARD REFRESH ---
+// --- SUBMIT DENGAN SWEETALERT2 MODAL & AUTO REFRESH ---
 window.submitData = () => {
     const cards = document.querySelectorAll('.student-card');
     const k = elKelas.value;
@@ -202,8 +288,8 @@ window.submitData = () => {
                 dTarget = document.getElementById(`target-${i}`).value;
 
                 if (!dTahfidz.trim()) {
-                    document.getElementById(`tahfidz-${i}`).style.borderColor = 'red';
-                    errorMsg = `GAGAL: Mohon isi Batas Tahfidz untuk siswa: ${nama}`;
+                    document.getElementById(`tahfidz-${i}`).style.borderColor = '#ef4444';
+                    errorMsg = `Mohon isi Batas Tahfidz untuk siswa: <b>${nama}</b>`;
                 }
             }
         }
@@ -220,36 +306,74 @@ window.submitData = () => {
         });
     });
 
+    // Validasi Gagal
     if(errorMsg) {
-        alert("⚠️ " + errorMsg);
+        Swal.fire({
+            icon: 'warning',
+            title: 'Data Belum Lengkap',
+            html: errorMsg,
+            confirmButtonColor: '#f59e0b'
+        });
         return;
     }
 
-    if(!confirm(`Yakin kirim data untuk ${payload.length} siswa?`)) return;
+    // Modal Konfirmasi Modern
+    Swal.fire({
+        title: 'Kirim Jurnal T2Q?',
+        text: `Anda akan mengirimkan data untuk ${payload.length} siswa.`,
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#2563eb',
+        cancelButtonColor: '#64748b',
+        confirmButtonText: '<i class="fa-solid fa-paper-plane"></i> Ya, Kirim Sekarang!',
+        cancelButtonText: 'Batal'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            
+            // Loading State Modal
+            Swal.fire({
+                title: 'Mengirim Data...',
+                text: 'Mohon tunggu, sedang menyimpan jurnal ke sistem.',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
 
-    const oldText = btn.innerHTML;
-    btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> MENGIRIM DATA...';
-    btn.disabled = true;
-
-    fetch(SCRIPT_URL, {
-        method: 'POST',
-        body: JSON.stringify(payload)
-    })
-    .then(res => res.json())
-    .then(res => {
-        if(res.status === 'success') {
-            alert("✅ TERKIRIM: " + res.message);
-            // Paksa reload dengan Timestamp agar data browser tidak basi (Bypass Cache)
-            window.location.href = window.location.pathname + '?refresh=' + Date.now();
-        } else {
-            alert("❌ GAGAL: " + res.message);
-            btn.innerHTML = oldText;
-            btn.disabled = false;
+            fetch(SCRIPT_URL, {
+                method: 'POST',
+                body: JSON.stringify(payload)
+            })
+            .then(res => res.json())
+            .then(res => {
+                if(res.status === 'success') {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'BERHASIL TERKIRIM!',
+                        text: res.message,
+                        timer: 2500,
+                        showConfirmButton: false
+                    }).then(() => {
+                        // Hard Refresh untuk bersihkan cache browser
+                        window.location.href = window.location.pathname + '?refresh=' + Date.now();
+                    });
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'GAGAL MENYIMPAN',
+                        text: res.message,
+                        confirmButtonColor: '#ef4444'
+                    });
+                }
+            })
+            .catch(err => {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Gangguan Koneksi',
+                    text: 'Gagal mengirim data. Coba periksa koneksi internet Anda.',
+                    confirmButtonColor: '#ef4444'
+                });
+            });
         }
-    })
-    .catch(err => {
-        alert("❌ GAGAL: Terjadi kesalahan jaringan / server. Detail: " + err);
-        btn.innerHTML = oldText;
-        btn.disabled = false;
     });
 };
