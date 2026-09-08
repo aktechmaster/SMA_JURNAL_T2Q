@@ -1,0 +1,249 @@
+:root {
+    --bg-color: #f0f2f5;
+    --card-bg: #ffffff;
+    --accent: #0284c7;
+    --accent-hover: #0369a1;
+    --text-main: #334155;
+    --text-muted: #64748b;
+    --border: #e2e8f0;
+    --input-bg: #f8fafc;
+    --success: #10b981;
+    --danger: #ef4444;
+}
+
+* { 
+    box-sizing: border-box; 
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    background-color: var(--bg-color);
+    color: var(--text-main);
+    margin: 0;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100vh;
+    padding: 20px 10px;
+}
+
+.container {
+    background-color: var(--card-bg);
+    width: 100%;
+    max-width: 550px;
+    border-radius: 12px;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.05), 0 2px 6px rgba(0,0,0,0.05);
+    border: 1px solid var(--border);
+    overflow: hidden;
+    position: relative;
+    margin-bottom: 80px;
+}
+
+.header {
+    background: linear-gradient(135deg, #38bdf8 0%, #2563eb 100%);
+    padding: 25px;
+    text-align: center;
+}
+
+.header h2 { 
+    margin: 0; 
+    font-size: 1.4rem; 
+    color: white; 
+    font-weight: 700; 
+}
+
+.header p { 
+    margin: 5px 0 0; 
+    color: rgba(255,255,255,0.9); 
+    font-size: 0.85rem; 
+}
+
+.control-area { 
+    padding: 20px; 
+    background: #fff; 
+    border-bottom: 1px solid var(--border); 
+}
+
+.student-list-area {
+    padding: 10px 20px 20px 20px;
+    background: var(--bg-color);
+}
+
+/* Kartu Per Siswa */
+.student-card {
+    background: #fff;
+    border-radius: 10px;
+    padding: 15px;
+    margin-bottom: 15px;
+    border: 1px solid var(--border);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    transition: all 0.2s;
+}
+
+.student-card.active-setor { 
+    border-left: 5px solid var(--success); 
+}
+
+.student-card.absent { 
+    border-left: 5px solid var(--danger); 
+    opacity: 0.8; 
+}
+
+.student-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.student-name { 
+    font-weight: 700; 
+    color: var(--text-main); 
+    font-size: 1.05rem; 
+}
+
+.input-group { 
+    margin-bottom: 12px; 
+    position: relative; 
+}
+
+.input-group label { 
+    display: block; 
+    font-size: 0.8rem; 
+    color: var(--text-muted); 
+    margin-bottom: 5px; 
+    font-weight: 600; 
+}
+
+.input-wrapper { 
+    position: relative; 
+}
+
+.input-wrapper i {
+    position: absolute; 
+    left: 12px; 
+    top: 50%; 
+    transform: translateY(-50%);
+    color: var(--text-muted); 
+    font-size: 0.9rem; 
+    pointer-events: none;
+}
+
+.mini-input, .mini-select {
+    width: 100%;
+    padding: 10px 10px 10px 35px;
+    background-color: var(--input-bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 0.9rem;
+    outline: none;
+}
+
+.mini-input:focus, .mini-select:focus {
+    border-color: var(--accent);
+    background: #fff;
+}
+
+/* Hidden Sections Animation */
+.hidden-details { 
+    display: none; 
+    margin-top: 15px; 
+    padding-top: 15px; 
+    border-top: 1px dashed var(--border); 
+}
+
+.show-details { 
+    display: block; 
+    animation: slideIn 0.3s forwards; 
+}
+
+@keyframes slideIn { 
+    from { 
+        opacity: 0; 
+        transform: translateY(-5px); 
+    } 
+    to { 
+        opacity: 1; 
+        transform: translateY(0); 
+    } 
+}
+
+/* Floating Submit Button */
+.bottom-action {
+    position: fixed; 
+    bottom: 0; 
+    left: 0; 
+    right: 0;
+    background: white; 
+    padding: 15px;
+    box-shadow: 0 -4px 10px rgba(0,0,0,0.05);
+    display: flex; 
+    justify-content: center; 
+    z-index: 100;
+}
+
+.btn-submit {
+    width: 100%; 
+    max-width: 500px;
+    padding: 14px;
+    background-color: var(--accent);
+    color: white; 
+    border: none; 
+    border-radius: 8px;
+    font-weight: 700; 
+    font-size: 1rem; 
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(2, 132, 199, 0.2);
+    transition: 0.2s;
+    display: flex; 
+    justify-content: center; 
+    align-items: center; 
+    gap: 10px;
+}
+
+.btn-submit:hover { 
+    background-color: var(--accent-hover); 
+    transform: translateY(-2px); 
+}
+
+.btn-submit:disabled { 
+    background-color: var(--text-muted); 
+    cursor: not-allowed; 
+    transform: none; 
+}
+
+/* Badge Styles */
+.badge-tahsin { 
+    background: #dcfce7; 
+    color: #166534; 
+    padding: 4px 10px; 
+    border-radius: 12px; 
+    font-size: 0.75rem; 
+    font-weight: bold; 
+    display: inline-block; 
+    margin-bottom: 8px; 
+}
+
+.badge-tahfidz { 
+    background: #ffe4e6; 
+    color: #be123c; 
+    padding: 4px 10px; 
+    border-radius: 12px; 
+    font-size: 0.75rem; 
+    font-weight: bold; 
+    display: inline-block; 
+    margin-bottom: 8px; 
+    margin-top: 10px;
+}
+
+.copyright {
+    text-align: center;
+    font-size: 11px;
+    color: #999;
+    margin-top: 30px;
+    border-top: 1px solid #eee;
+    padding-top: 15px;
+    padding-bottom: 25px;
+    margin-bottom: 5px;
+    font-family: sans-serif;
+}
